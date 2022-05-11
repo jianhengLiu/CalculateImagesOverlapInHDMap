@@ -1,4 +1,12 @@
 # CalculateImagesOverlapInHDMap
+
+
+# 0. Usage
+1. Download Vicon Room Datasets in EuRoC MAV Dataset which contains a HD pointcloud map
+2. replace `ply_path` in `CalculateImagesOverlapInHDMap.cpp` with `PATH_TO_DATASET/V2_01_easy/mav0/pointcloud0/data.ply`
+3. run
+
+
 # 1.目标
 **输入/已有数据**
 - 3D稠密点云地图
@@ -58,8 +66,3 @@
 - 在地图坐标系下进行FOV点云采集
     - GPU并行raycast
 
-
-# 1. Usage
-1. Download Vicon Room Datasets in EuRoC MAV Dataset which contains a HD pointcloud map
-2. replace `ply_path` in `CalculateImagesOverlapInHDMap.cpp` with `PATH_TO_DATASET/V2_01_easy/mav0/pointcloud0/data.ply`
-3. run

@@ -2,7 +2,7 @@
  * @Author: Jianheng Liu
  * @Date: 2022-05-07 14:38:02
  * @LastEditors: Jianheng Liu
- * @LastEditTime: 2022-05-09 22:32:00
+ * @LastEditTime: 2022-05-11 17:33:27
  * @Description: Description
  */
 #include <iostream>
@@ -21,6 +21,8 @@
 #include <pcl/visualization/pcl_visualizer.h>
 #include <vector>
 
+typedef pcl::PointXYZ PointT;
+typedef pcl::PointCloud<PointT> PointCloudT;
 // #camera calibration
 // model_type: PINHOLE
 // camera_name: camera
@@ -38,7 +40,7 @@
 //    cx: 320
 //    cy: 240
 
-void matchPointCloudsID(std::map<int, Eigen::Vector3d>& points_1, std::map<int, Eigen::Vector3d>& points_2, pcl::PointCloud<pcl::PointXYZ>::Ptr match_cloud, cv::Mat& reproject_img)
+void matchPointCloudsID(std::map<int, Eigen::Vector3d>& points_1, std::map<int, Eigen::Vector3d>& points_2, PointCloudT::Ptr match_cloud, cv::Mat& reproject_img)
 {
     Eigen::Matrix3d camera_matrix;
     camera_matrix << 380, 0, 320, 0, 380, 240, 0, 0, 1;
@@ -64,7 +66,7 @@ void matchPointCloudsID(std::map<int, Eigen::Vector3d>& points_1, std::map<int, 
     std::cout << "Occupied Ratio:" << (float)occupied_num / img_size << std::endl;
 }
 
-void filterPointCloudWithCameraModel(pcl::PointCloud<pcl::PointXYZI>::Ptr cloud, std::map<int, Eigen::Vector3d>& points_FOV, pcl::PointCloud<pcl::PointXYZI>::Ptr filtered_cloud)
+void filterPointCloudWithCameraModel(PointCloudT::Ptr cloud, std::map<int, Eigen::Vector3d>& points_FOV, PointCloudT::Ptr filtered_cloud)
 {
     Eigen::Matrix3d camera_matrix;
     camera_matrix << 380, 0, 320, 0, 380, 240, 0, 0, 1;
@@ -84,21 +86,18 @@ void filterPointCloudWithCameraModel(pcl::PointCloud<pcl::PointXYZI>::Ptr cloud,
 int main(int argc, char** argv)
 {
     // read ply file and visualize
-    pcl::PointCloud<pcl::PointXYZI>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZI>);
+    PointCloudT::Ptr cloud(new PointCloudT);
 
-    std::string ply_path = "/home/narwal/dataset/euroc/V2_01_easy/mav0/pointcloud0/data.ply";
+    std::string ply_path = "/home/narwal/narwal_ws/src/CalculateImagesOverlapInHDMap/pointcloud/data.ply";
     if (pcl::io::loadPLYFile(ply_path, *cloud) == -1) //* load the file
     {
-        PCL_ERROR("Couldn't read file test_pcd.pcd \n");
-        system("PAUSE");
+        PCL_ERROR("Couldn't read file: %s\n",ply_path.c_str());
         return (-1);
     }
 
     Eigen::Affine3f w_transform_c1 = Eigen::Affine3f::Identity();
-
     // Define a translation of 2.5 meters on the x axis.
     w_transform_c1.translation() << 2.5, 0.0, 0.0;
-
     // The same rotation matrix as before; theta radians around Z axis
     float yaw = M_PI / 4.0;
     w_transform_c1.rotate(Eigen::AngleAxisf(yaw, Eigen::Vector3f::UnitZ()));
@@ -106,46 +105,46 @@ int main(int argc, char** argv)
     std::cout << w_transform_c1.inverse().matrix() << std::endl;
 
     // Executing the transformation
-    pcl::PointCloud<pcl::PointXYZI>::Ptr transformed_cloud(new pcl::PointCloud<pcl::PointXYZI>());
+    PointCloudT::Ptr transformed_cloud(new PointCloudT());
     // You can either apply transform_1 or transform_2; they are the same
     pcl::transformPointCloud(*cloud, *transformed_cloud, w_transform_c1.inverse());
 
     std::map<int, Eigen::Vector3d> points_FOV_1;
-    pcl::PointCloud<pcl::PointXYZI>::Ptr filtered_cloud_1(new pcl::PointCloud<pcl::PointXYZI>());
-    filterPointCloudWithCameraModel(cloud, points_FOV_1, filtered_cloud_1);
+    PointCloudT::Ptr cloud_camera1(new PointCloudT());
+    filterPointCloudWithCameraModel(cloud, points_FOV_1, cloud_camera1);
 
     std::map<int, Eigen::Vector3d> points_FOV_2;
-    pcl::PointCloud<pcl::PointXYZI>::Ptr filtered_cloud_2(new pcl::PointCloud<pcl::PointXYZI>());
-    filterPointCloudWithCameraModel(transformed_cloud, points_FOV_2, filtered_cloud_2);
+    PointCloudT::Ptr cloud_camera2(new PointCloudT());
+    filterPointCloudWithCameraModel(transformed_cloud, points_FOV_2, cloud_camera2);
     // for visualization
-    pcl::transformPointCloud(*filtered_cloud_2, *filtered_cloud_2, w_transform_c1);
+    pcl::transformPointCloud(*cloud_camera2, *cloud_camera2, w_transform_c1);
 
-    pcl::PointCloud<pcl::PointXYZ>::Ptr match_cloud(new pcl::PointCloud<pcl::PointXYZ>);
-
+    PointCloudT::Ptr match_cloud(new PointCloudT);
     cv::Mat reproject_img = cv::Mat::zeros(480, 640, CV_8UC1);
     matchPointCloudsID(points_FOV_1, points_FOV_2, match_cloud, reproject_img);
 
     pcl::visualization::PCLVisualizer viewer("Matrix transformation example");
-
-    // Define R,G,B colors for the point cloud
-    pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZI> source_cloud_color_handler(cloud, 255, 255, 255);
+    
     // filter out point cloud over 1m in z direction
-    pcl::PassThrough<pcl::PointXYZI> pass;
+    pcl::PassThrough<PointT> pass;
     pass.setInputCloud(cloud);
     pass.setFilterFieldName("z");
     pass.setFilterLimits(1.0, 10.0);
     pass.filter(*cloud);
+
+    // Define R,G,B colors for the point cloud
+    pcl::visualization::PointCloudColorHandlerCustom<PointT> source_cloud_color_handler(cloud, 255, 255, 255);
     // We add the point cloud to the viewer and pass the color handler
     viewer.addPointCloud(cloud, source_cloud_color_handler, "original_cloud");
     viewer.setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, "original_cloud");
 
-    pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZI> transformed1_cloud_color_handler(transformed_cloud, 230, 20, 20); // Red
-    viewer.addPointCloud(filtered_cloud_1, transformed1_cloud_color_handler, "transformed1_cloud");
-    viewer.setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, "transformed1_cloud");
+    pcl::visualization::PointCloudColorHandlerCustom<PointT> transformed1_cloud_color_handler(transformed_cloud, 230, 20, 20); // Red
+    viewer.addPointCloud(cloud_camera1, transformed1_cloud_color_handler, "cloud_camera1");
+    viewer.setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, "cloud_camera1");
 
-    pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZI> transformed2_cloud_color_handler(transformed_cloud, 20, 230, 20); // Red
-    viewer.addPointCloud(filtered_cloud_2, transformed2_cloud_color_handler, "transformed2_cloud");
-    viewer.setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, "transformed2_cloud");
+    pcl::visualization::PointCloudColorHandlerCustom<PointT> transformed2_cloud_color_handler(transformed_cloud, 20, 230, 20); // Red
+    viewer.addPointCloud(cloud_camera2, transformed2_cloud_color_handler, "cloud_camera2");
+    viewer.setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, "cloud_camera2");
 
     pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> match_cloud_color_handler(match_cloud, 20, 20, 230); // Red
     viewer.addPointCloud(match_cloud, match_cloud_color_handler, "match_cloud");

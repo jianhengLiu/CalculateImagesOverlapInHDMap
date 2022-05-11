@@ -43,3 +43,11 @@ add_executable(${PROJECT_NAME} src/CalculateImagesOverlapInHDMap.cpp
 target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS}
 )
+add_executable(Registration2DGridMapWith3DMap src/Registration2DGridMapWith3DMap.cpp 
+)
+
+## Specify libraries to link a library or executable target against
+target_link_libraries(Registration2DGridMapWith3DMap
+  ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS}
+)
+
