@@ -2,7 +2,7 @@
  * @Author: Jianheng Liu
  * @Date: 2022-05-12 12:21:54
  * @LastEditors: Jianheng Liu
- * @LastEditTime: 2022-05-12 15:42:52
+ * @LastEditTime: 2022-05-12 19:59:33
  * @Description: Description
  */
 #pragma once
@@ -13,7 +13,33 @@
 #include <map>
 #include <vector>
 
-std::vector<Eigen::Isometry3d> loadGTData(std::string gtFile)
+std::vector<long long> loadImageIDs(std::string image_path)
+{
+    std::string image_file = image_path.substr(0, image_path.find_last_of('/')) + "/data.csv";
+
+    std::vector<long long> image_ids;
+    std::ifstream tr;
+    tr.open(image_file.c_str());
+
+    if (!tr.good()) {
+        return image_ids;
+    }
+    while (!tr.eof() && tr.good()) {
+        std::string line;
+        char buf[1000];
+        tr.getline(buf, 1000);
+
+        long long id;
+        if (sscanf(buf, "%lld", &id)) {
+            // std::cout << id << std::endl;
+            image_ids.emplace_back(id);
+        }
+    }
+    tr.close();
+    return image_ids;
+}
+
+std::map<long long, Eigen::Isometry3d> loadGTData(std::string gtFile)
 {
     std::string path = "/home/narwal/dataset/euroc/V2_01_easy";
     std::string defaultFile = path + "mav0/state_groundtruth_estimate0/data.csv";
@@ -23,7 +49,8 @@ std::vector<Eigen::Isometry3d> loadGTData(std::string gtFile)
         gtFile = defaultFile;
     }
 
-    std::vector<Eigen::Isometry3d> gt_data;
+    // std::map<long long, Eigen::Isometry3d> gt_data;
+    std::map<long long, Eigen::Isometry3d> gt_data;
     std::ifstream tr;
     tr.open(gtFile.c_str());
 
@@ -49,7 +76,7 @@ std::vector<Eigen::Isometry3d> loadGTData(std::string gtFile)
             // Eigen::Vector3d biasRot(br1, br2, br3);
             // Eigen::Vector3d biasPos(bp1, bp2, bp3);
 
-            gt_data.emplace_back(pose);
+            gt_data[id] = pose;
 
             // gtData[id] = dmvio::GTData(pose, velocity, biasRot, biasPos);
 

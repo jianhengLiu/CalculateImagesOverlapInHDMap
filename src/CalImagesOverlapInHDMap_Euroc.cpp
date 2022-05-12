@@ -2,16 +2,18 @@
  * @Author: Jianheng Liu
  * @Date: 2022-05-07 14:38:02
  * @LastEditors: Jianheng Liu
- * @LastEditTime: 2022-05-12 17:02:43
+ * @LastEditTime: 2022-05-12 20:31:22
  * @Description: Description
  */
 #include <iostream>
 #include <map>
-#include <opencv2/highgui.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/opencv.hpp>
 #include <pcl/ModelCoefficients.h>
 #include <pcl/common/transforms.h>
+#include <pcl/console/parse.h>
 #include <pcl/filters/passthrough.h>
 #include <pcl/filters/project_inliers.h>
 #include <pcl/io/pcd_io.h>
@@ -25,6 +27,7 @@
 #include <camera_models/PinholeCamera.h>
 
 #include "DataLoader.hpp"
+#include "pcl/visualization/point_cloud_color_handlers.h"
 
 using namespace std;
 
@@ -32,6 +35,7 @@ typedef pcl::PointXYZ PointT;
 typedef pcl::PointCloud<PointT> PointCloudT;
 
 camodocal::CameraPtr m_camera;
+pcl::visualization::PCLVisualizer viewer("Matrix transformation example");
 
 void matchPointCloudsID(std::map<int, Eigen::Vector3d>& ids_points_img0, std::map<int, Eigen::Vector3d>& ids_points_img1, PointCloudT::Ptr cloud_match, cv::Mat& reproject_img)
 {
@@ -88,14 +92,54 @@ void getPointCloudInFOV(PointCloudT::Ptr cloud_in, const Eigen::Matrix4d& img_T_
     }
 }
 
-void test()
+cv::Mat test(PointCloudT::Ptr cloud_in, Eigen::Isometry3d w_T_img0, Eigen::Isometry3d w_T_img1)
 {
-    // Load the camera model
+    std::map<int, Eigen::Vector3d> ids_points_FOV_img0;
+    PointCloudT::Ptr cloud_FOV_img0(new PointCloudT());
+    getPointCloudInFOV(cloud_in, w_T_img0.inverse().matrix(), ids_points_FOV_img0, cloud_FOV_img0);
+
+    std::map<int, Eigen::Vector3d> ids_points_FOV_img1;
+    PointCloudT::Ptr cloud_FOV_img1(new PointCloudT());
+    getPointCloudInFOV(cloud_in, w_T_img1.inverse().matrix(), ids_points_FOV_img1, cloud_FOV_img1);
+
+    PointCloudT::Ptr cloud_match(new PointCloudT);
+    cv::Mat reproject_img = cv::Mat::zeros(m_camera->imageHeight(), m_camera->imageWidth(), CV_8UC1);
+    matchPointCloudsID(ids_points_FOV_img0, ids_points_FOV_img1, cloud_match, reproject_img);
+    pcl::transformPointCloud(*cloud_match, *cloud_match, w_T_img0.matrix());
+
+    // filter out point cloud over 1m in z direction
+    // pcl::PassThrough<PointT> pass;
+    // pass.setInputCloud(cloud_in);
+    // pass.setFilterFieldName("z");
+    // pass.setFilterLimits(1.0, 10.0);
+    // pass.filter(*cloud_in);
+
+    pcl::visualization::PointCloudColorHandlerCustom<PointT> transformed1_cloud_color_handler(cloud_FOV_img0, 230, 20, 20); // Red
+    viewer.removePointCloud("cloud_FOV_img0");
+    viewer.addPointCloud(cloud_FOV_img0, transformed1_cloud_color_handler, "cloud_FOV_img0");
+
+    pcl::visualization::PointCloudColorHandlerCustom<PointT> transformed2_cloud_color_handler(cloud_FOV_img1, 20, 230, 20); // Red
+    viewer.removePointCloud("cloud_FOV_img1");
+    viewer.addPointCloud(cloud_FOV_img1, transformed2_cloud_color_handler, "cloud_FOV_img1");
+
+    pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> match_cloud_color_handler(cloud_match, 20, 20, 230); // Red
+    viewer.removePointCloud("match_cloud");
+    viewer.addPointCloud(cloud_match, match_cloud_color_handler, "match_cloud");
+
+    return reproject_img;
+    // cv::imshow("reproject_img", reproject_img);
 }
 
 int main(int argc, char** argv)
 {
-    std::vector<Eigen::Isometry3d> gt_data = loadGTData("/home/narwal/dataset/euroc/V2_01_easy/mav0/state_groundtruth_estimate0/data.csv");
+    std::string gt_file = "/home/narwal/dataset/euroc/V2_01_easy/mav0/state_groundtruth_estimate0/data.csv";
+    std::string image_path = "/home/narwal/dataset/euroc/V2_01_easy/mav0/cam0/data";
+    std::map<long long, Eigen::Isometry3d> gt_data = loadGTData(gt_file);
+    std::vector<long long> image_ids = loadImageIDs(image_path);
+
+    m_camera
+        = camodocal::CameraFactory::instance()->generateCameraFromYamlFile("/home/narwal/narwal_ws/src/CalculateImagesOverlapInHDMap/config/euroc/euroc_config.yaml");
+
     Eigen::Isometry3d b_T_cam0 = Eigen::Isometry3d::Identity();
     Eigen::Matrix3d b_R_cam0;
     b_R_cam0 << 0.0148655429818, -0.999880929698, 0.00414029679422,
@@ -108,14 +152,6 @@ int main(int argc, char** argv)
 
     // Generate random number in given range
     srand((unsigned int)time(nullptr)); //初始化种子为随机值
-    int img0_id = rand() % gt_data.size();
-    int img1_id = rand() % gt_data.size();
-
-    auto w_T_img0 = gt_data[img0_id] * b_T_cam0;
-    auto w_T_img1 = gt_data[img1_id] * b_T_cam0;
-
-    m_camera
-        = camodocal::CameraFactory::instance()->generateCameraFromYamlFile("/home/narwal/narwal_ws/src/CalculateImagesOverlapInHDMap/config/euroc/euroc_config.yaml");
 
     // read ply file and visualize
     PointCloudT::Ptr cloud_in(new PointCloudT);
@@ -127,60 +163,45 @@ int main(int argc, char** argv)
         return (-1);
     }
 
-    std::map<int, Eigen::Vector3d> ids_points_FOV_img0;
-    PointCloudT::Ptr cloud_FOV_img0(new PointCloudT());
-    getPointCloudInFOV(cloud_in, w_T_img0.inverse().matrix(), ids_points_FOV_img0, cloud_FOV_img0);
-    // pcl::transformPointCloud(*cloud_FOV_img0, *cloud_FOV_img0, w_T_img0.matrix());
-
-    std::map<int, Eigen::Vector3d> ids_points_FOV_img1;
-    PointCloudT::Ptr cloud_FOV_img1(new PointCloudT());
-    getPointCloudInFOV(cloud_in, w_T_img1.inverse().matrix(), ids_points_FOV_img1, cloud_FOV_img1);
-    // pcl::transformPointCloud(*cloud_FOV_img1, *cloud_FOV_img1, w_T_img1.matrix());
-
-    PointCloudT::Ptr cloud_match(new PointCloudT);
-    cv::Mat reproject_img = cv::Mat::zeros(m_camera->imageHeight(), m_camera->imageWidth(), CV_8UC1);
-    matchPointCloudsID(ids_points_FOV_img0, ids_points_FOV_img1, cloud_match, reproject_img);
-    pcl::transformPointCloud(*cloud_match, *cloud_match, w_T_img0.matrix());
-
-    pcl::visualization::PCLVisualizer viewer("Matrix transformation example");
-
-    // filter out point cloud over 1m in z direction
-    pcl::PassThrough<PointT> pass;
-    pass.setInputCloud(cloud_in);
-    pass.setFilterFieldName("z");
-    pass.setFilterLimits(1.0, 10.0);
-    pass.filter(*cloud_in);
-
     // Define R,G,B colors for the point cloud
     pcl::visualization::PointCloudColorHandlerCustom<PointT> source_cloud_color_handler(cloud_in, 255, 255, 255);
     // We add the point cloud to the viewer and pass the color handler
     viewer.addPointCloud(cloud_in, source_cloud_color_handler, "original_cloud");
-    // viewer.setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, "original_cloud");
-
-    pcl::visualization::PointCloudColorHandlerCustom<PointT> transformed1_cloud_color_handler(cloud_FOV_img0, 230, 20, 20); // Red
-    viewer.addPointCloud(cloud_FOV_img0, transformed1_cloud_color_handler, "cloud_FOV_img0");
-    // viewer.setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, "cloud_FOV_img0");
-
-    pcl::visualization::PointCloudColorHandlerCustom<PointT> transformed2_cloud_color_handler(cloud_FOV_img1, 20, 230, 20); // Red
-    viewer.addPointCloud(cloud_FOV_img1, transformed2_cloud_color_handler, "cloud_FOV_img1");
-    // viewer.setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, "cloud_FOV_img1");
-
-    pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> match_cloud_color_handler(cloud_match, 20, 20, 230); // Red
-    viewer.addPointCloud(cloud_match, match_cloud_color_handler, "match_cloud");
-    // viewer.setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, "match_cloud");
+    viewer.setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_OPACITY, 0.05, "original_cloud");
 
     viewer.addCoordinateSystem(1.0, "cloud", 0);
     viewer.setBackgroundColor(0.05, 0.05, 0.05, 0); // Setting background to a dark grey
     // viewer.setPosition(800, 400); // Setting visualiser window position
     viewer.setCameraPosition(0, 0, -20, 0, -1, 0); // Setting camera position: http://t.zoukankan.com/ghjnwk-p-10305796.html
+    cv::namedWindow("image_pair", cv::WINDOW_AUTOSIZE);
 
+    bool is_first = true;
     while (!viewer.wasStopped()) { // Display the visualiser until 'q' key is pressed
-        cv::imshow("reproject_img", reproject_img);
-        cv::waitKey(1);
+        if (cv::waitKey(100) != 255 || is_first) {
+            is_first = false;
+            int img0_id = rand() % image_ids.size();
+            int img1_id = rand() % image_ids.size();
+
+            if (gt_data.find(image_ids[img0_id]) != gt_data.end() && gt_data.find(image_ids[img1_id]) != gt_data.end()) {
+                auto w_T_img0 = gt_data[image_ids[img0_id]] * b_T_cam0;
+                auto w_T_img1 = gt_data[image_ids[img1_id]] * b_T_cam0;
+                cv::Mat reproject_img = test(cloud_in, w_T_img0, w_T_img1);
+
+                cv::Mat image_pair;
+                cv::hconcat(cv::imread(image_path + "/" + std::to_string(image_ids[img0_id]) + ".png", cv::IMREAD_GRAYSCALE) + 0.5 * reproject_img, cv::imread(image_path + "/" + std::to_string(image_ids[img1_id]) + ".png", cv::IMREAD_GRAYSCALE), image_pair);
+                cv::cvtColor(image_pair, image_pair, cv::COLOR_GRAY2BGR);
+                cv::putText(image_pair, "IMAGE0", cv::Point(0, 30), cv::FONT_HERSHEY_COMPLEX, 1, cv::Scalar(0, 0, 255), 2);
+                cv::putText(image_pair, "IMAGE1", cv::Point(m_camera->imageWidth(), 30), cv::FONT_HERSHEY_COMPLEX, 1, cv::Scalar(0, 255, 0), 2);
+                cv::imshow("image_pair", image_pair);
+            } else {
+                is_first = true;
+            }
+        }
+
+        viewer.spinOnce();
         // std::cout << "viewer.getViewerPose() = " << std::endl
         //           << viewer.getViewerPose().matrix()
         //           << std::endl;
-        viewer.spinOnce();
     }
     cv::destroyAllWindows();
     return (0);
