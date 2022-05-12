@@ -2,8 +2,17 @@
 
 
 # 0. Usage
+
+## 0.1.点云地图上Overlap计算基本验证`CalculateImagesOverlapInHDMap.cpp`
+
 1. Download Vicon Room Datasets in EuRoC MAV Dataset which contains a HD pointcloud map
 2. replace `ply_path` in `CalculateImagesOverlapInHDMap.cpp` with `PATH_TO_DATASET/V2_01_easy/mav0/pointcloud0/data.ply`
+3. run
+
+## 0.2.2D地图到点云地图上ICP基本验证`Registration2DGridMapWith3DMap.cpp`
+
+1. Download Vicon Room Datasets in EuRoC MAV Dataset which contains a HD pointcloud map
+2. replace `ply_path` with `PATH_TO_DATASET/V2_01_easy/mav0/pointcloud0/data.ply`
 3. run
 
 

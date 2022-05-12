@@ -20,6 +20,9 @@ include_directories(${Boost_INCLUDE_DIRS})
 
 find_package(OpenCV REQUIRED)
 
+find_package(Ceres REQUIRED)
+include_directories(${CERES_INCLUDE_DIRS})
+
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES ImagesRegistrationInHDMap
@@ -36,17 +39,34 @@ ${EIGEN3_INCLUDE_DIR}
 ${PCL_INCLUDE_DIRS}
 )
 
+
+add_library(camera_model
+    src/camera_models/Camera.cc
+    src/camera_models/CameraFactory.cc
+    src/camera_models/PinholeCamera.cc
+    src/camera_models/CataCamera.cc
+    src/camera_models/EquidistantCamera.cc
+    src/camera_models/ScaramuzzaCamera.cc
+    src/gpl/gpl.cc
+    src/gpl/EigenQuaternionParameterization.cc
+    )
+target_link_libraries(camera_model ${Boost_LIBRARIES} ${OpenCV_LIBS} ${CERES_LIBRARIES})
+
+
 add_executable(${PROJECT_NAME} src/CalculateImagesOverlapInHDMap.cpp 
 )
-
-## Specify libraries to link a library or executable target against
 target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS}
 )
-add_executable(Registration2DGridMapWith3DMap src/Registration2DGridMapWith3DMap.cpp 
+
+add_executable(CalImagesOverlapInHDMap_Euroc src/CalImagesOverlapInHDMap_Euroc.cpp 
+)
+target_link_libraries(CalImagesOverlapInHDMap_Euroc
+  ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS} camera_model
 )
 
-## Specify libraries to link a library or executable target against
+add_executable(Registration2DGridMapWith3DMap src/Registration2DGridMapWith3DMap.cpp 
+)
 target_link_libraries(Registration2DGridMapWith3DMap
   ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS}
 )

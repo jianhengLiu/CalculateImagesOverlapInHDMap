@@ -108,10 +108,9 @@ int main(int argc, char** argv)
     float yaw = M_PI / 4.0;
     w_T_c1.rotate(Eigen::AngleAxisf(yaw, Eigen::Vector3f::UnitZ()));
     w_T_c1.rotate(Eigen::AngleAxisf(yaw, Eigen::Vector3f::UnitY()));
+    w_T_c1 = w_T_c1.inverse();// c1_T_w -> w_T_c1
     std::cout << "w_T_c1:" << std::endl
               << w_T_c1.matrix() << std::endl;
-    std::cout << "w_T_c1.inverse():" << std::endl
-              << w_T_c1.inverse().matrix() << std::endl;
 
     PointCloudT::Ptr transformed_input_grid_cloud(new PointCloudT);
     // Executing the transformation

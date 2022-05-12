@@ -66,7 +66,7 @@ void matchPointCloudsID(std::map<int, Eigen::Vector3d>& points_1, std::map<int, 
     std::cout << "Occupied Ratio:" << (float)occupied_num / img_size << std::endl;
 }
 
-void filterPointCloudWithCameraModel(PointCloudT::Ptr cloud, std::map<int, Eigen::Vector3d>& points_FOV, PointCloudT::Ptr filtered_cloud)
+void getPointCloudWithCameraModel(PointCloudT::Ptr cloud, std::map<int, Eigen::Vector3d>& points_FOV, PointCloudT::Ptr filtered_cloud)
 {
     Eigen::Matrix3d camera_matrix;
     camera_matrix << 380, 0, 320, 0, 380, 240, 0, 0, 1;
@@ -111,11 +111,11 @@ int main(int argc, char** argv)
 
     std::map<int, Eigen::Vector3d> points_FOV_1;
     PointCloudT::Ptr cloud_camera1(new PointCloudT());
-    filterPointCloudWithCameraModel(cloud, points_FOV_1, cloud_camera1);
+    getPointCloudWithCameraModel(cloud, points_FOV_1, cloud_camera1);
 
     std::map<int, Eigen::Vector3d> points_FOV_2;
     PointCloudT::Ptr cloud_camera2(new PointCloudT());
-    filterPointCloudWithCameraModel(transformed_cloud, points_FOV_2, cloud_camera2);
+    getPointCloudWithCameraModel(transformed_cloud, points_FOV_2, cloud_camera2);
     // for visualization
     pcl::transformPointCloud(*cloud_camera2, *cloud_camera2, w_transform_c1);
 
