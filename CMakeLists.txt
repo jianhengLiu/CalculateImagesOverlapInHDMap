@@ -70,4 +70,3 @@ add_executable(Registration2DGridMapWith3DMap src/Registration2DGridMapWith3DMap
 target_link_libraries(Registration2DGridMapWith3DMap
   ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS}
 )
-
