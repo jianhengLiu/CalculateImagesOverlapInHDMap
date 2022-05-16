@@ -41,10 +41,10 @@ public:
         double k3(void) const;
         double k4(void) const;
         double k5(void) const;
-        double mu(void) const;
-        double mv(void) const;
-        double u0(void) const;
-        double v0(void) const;
+        double mu(void) const; // fx
+        double mv(void) const; // fy
+        double u0(void) const; // cx
+        double v0(void) const; // cy
 
         bool readFromYamlFile(const std::string& filename);
         void writeToYamlFile(const std::string& filename) const;

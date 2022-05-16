@@ -443,7 +443,8 @@ EquidistantCamera::liftProjective(const Eigen::Vector2d& p, Eigen::Vector3d& P) 
 
 /** 
  * \brief Project a 3D point (\a x,\a y,\a z) to the image plane in (\a u,\a v)
- *
+ *  https://docs.opencv.org/3.4/db/d58/group__calib3d__fisheye.html
+    https://blog.csdn.net/weixin_43304707/article/details/113261307
  * \param P 3D point coordinates
  * \param p return value, contains the image point coordinates
  */
@@ -453,9 +454,12 @@ EquidistantCamera::spaceToPlane(const Eigen::Vector3d& P, Eigen::Vector2d& p) co
     double theta = acos(P(2) / P.norm());
     double phi = atan2(P(1), P(0));
 
+    // r: theta -> theta_d
+    // p_x = theta_d * x / sqrt(x *x + y * y) = theta_d * cos(phi)
     Eigen::Vector2d p_u = r(mParameters.k2(), mParameters.k3(), mParameters.k4(), mParameters.k5(), theta) * Eigen::Vector2d(cos(phi), sin(phi));
 
     // Apply generalised projection matrix
+    // fx * p_x + cx
     p << mParameters.mu() * p_u(0) + mParameters.u0(),
          mParameters.mv() * p_u(1) + mParameters.v0();
 }

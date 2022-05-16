@@ -65,6 +65,12 @@ target_link_libraries(CalImagesOverlapInHDMap_Euroc
   ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS} camera_model
 )
 
+add_executable(CalFisheyeOverlap_Euroc src/CalFisheyeOverlap_Euroc.cpp 
+)
+target_link_libraries(CalFisheyeOverlap_Euroc
+  ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS} camera_model
+)
+
 add_executable(Registration2DGridMapWith3DMap src/Registration2DGridMapWith3DMap.cpp 
 )
 target_link_libraries(Registration2DGridMapWith3DMap

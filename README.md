@@ -15,6 +15,23 @@
 2. replace `ply_path` with `PATH_TO_DATASET/V2_01_easy/mav0/pointcloud0/data.ply`
 3. run
 
+## 0.3.点云地图上Pinhole Camera Overlap计算基本验证`CalImagesOverlapInHDMap_Euroc.cpp`
+
+Dev log: https://www.notion.so/afc8e85f309e48f2a223bd2041ac697b
+
+1. Download Vicon Room Datasets in EuRoC MAV Dataset which contains a HD pointcloud map
+2. replace `path`
+3. run: enter any key in image window for next random sample.
+
+
+## 0.4.点云地图上Fisheye Camera Overlap计算基本验证`CalFisheyeOverlap_Euroc.cpp`
+
+Dev log: https://www.notion.so/cfc7d3abd0e049d18cf60a93a18efd88
+
+1. Download Vicon Room Datasets in EuRoC MAV Dataset which contains a HD pointcloud map
+2. change path in `config/fisheye.yaml`
+3. run: enter any key in image window for next random sample.
+
 
 # 1.目标
 **输入/已有数据**
