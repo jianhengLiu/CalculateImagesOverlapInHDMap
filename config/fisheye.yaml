@@ -4,7 +4,10 @@ is_sim: 1
 
 gt_file: "/home/narwal/dataset/euroc/V2_01_easy/mav0/state_groundtruth_estimate0/data.csv"
 image_path: "/home/narwal/dataset/euroc/V2_01_easy/mav0/cam0/data"
-ply_path: "/home/narwal/narwal_ws/src/CalculateImagesOverlapInHDMap/pointcloud/data.ply"
+# ply_path: "/home/narwal/narwal_ws/src/CalculateImagesOverlapInHDMap/pointcloud/data.ply"
+# pcd_path: "/home/narwal/r3live_ws/src/FAST_LIO/PCD/scans0518-12.pcd"
+pcd_path: "/home/narwal/r3live_output/31_0602_2.pcd"
+
 
 #camera calibration 
 model_type: KANNALA_BRANDT
@@ -21,3 +24,17 @@ projection_parameters:
    mv: 522.7972650029271 # fy
    u0: 543.3751551559554 # cx
    v0: 966.408823239453  # cy
+
+#Rotation from camera frame to body frame, b_R_cam
+extrinsicRotation: !!opencv-matrix
+   rows: 3
+   cols: 3
+   dt: d
+   data: [ 0.0148655429818, -0.999880929698, 0.00414029679422, 0.999557249008, 0.0149672133247, 0.025715529948,
+        -0.0257744366974, 0.00375618835797, 0.999660727178]
+#Translation from camera frame to body frame, b_R_cam
+extrinsicTranslation: !!opencv-matrix
+   rows: 3
+   cols: 1
+   dt: d
+   data: [-0.0216401454975, -0.064676986768, 0.00981073058949]

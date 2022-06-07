@@ -76,3 +76,9 @@ add_executable(Registration2DGridMapWith3DMap src/Registration2DGridMapWith3DMap
 target_link_libraries(Registration2DGridMapWith3DMap
   ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS}
 )
+
+add_executable(BuildMapByPoseDepth src/BuildMapByPoseDepth.cpp 
+)
+target_link_libraries(BuildMapByPoseDepth
+  ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS} camera_model
+)

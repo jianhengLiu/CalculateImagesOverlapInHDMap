@@ -17,7 +17,8 @@
 
 ## 0.3.点云地图上Pinhole Camera Overlap计算基本验证`CalImagesOverlapInHDMap_Euroc.cpp`
 
-Dev log: https://www.notion.so/afc8e85f309e48f2a223bd2041ac697b
+Dev log: 
+- https://www.notion.so/afc8e85f309e48f2a223bd2041ac697b
 
 1. Download Vicon Room Datasets in EuRoC MAV Dataset which contains a HD pointcloud map
 2. replace `path`
@@ -26,7 +27,9 @@ Dev log: https://www.notion.so/afc8e85f309e48f2a223bd2041ac697b
 
 ## 0.4.点云地图上Fisheye Camera Overlap计算基本验证`CalFisheyeOverlap_Euroc.cpp`
 
-Dev log: https://www.notion.so/cfc7d3abd0e049d18cf60a93a18efd88
+Dev log:
+- https://www.notion.so/cfc7d3abd0e049d18cf60a93a18efd88
+- 相互重投影取overlap小得作为二者得相似度：https://www.notion.so/8e4b35acb29b43c5b6c049977b317cdc#a76e67655bc34de9ad0f5a544663827b
 
 1. Download Vicon Room Datasets in EuRoC MAV Dataset which contains a HD pointcloud map
 2. change path in `config/fisheye.yaml`

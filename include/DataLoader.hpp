@@ -2,7 +2,7 @@
  * @Author: Jianheng Liu
  * @Date: 2022-05-12 12:21:54
  * @LastEditors: Jianheng Liu
- * @LastEditTime: 2022-05-16 16:31:40
+ * @LastEditTime: 2022-06-02 17:00:59
  * @Description: Description
  */
 #pragma once
@@ -11,6 +11,7 @@
 
 #include <eigen3/Eigen/Dense>
 #include <map>
+#include <opencv2/core/eigen.hpp>
 #include <vector>
 
 #include <opencv2/core/core.hpp>
@@ -21,7 +22,11 @@ struct Config
 
     std::string gt_file;
     std::string image_path;
+    std::string depth_path;
     std::string ply_path;
+    std::string pcd_path;
+
+    Eigen::Isometry3d b_T_cam;
 };
 
 Config loadConfigFromYamlFile(const std::string &filename)
@@ -34,14 +39,39 @@ Config loadConfigFromYamlFile(const std::string &filename)
 
     Config config;
     config.is_sim = static_cast<int>(fs["is_sim"]);
+
     fs["gt_file"] >> config.gt_file;
     fs["image_path"] >> config.image_path;
-    fs["ply_path"] >> config.ply_path;
+    fs["depth_path"] >> config.depth_path;
+    if (!fs["ply_path"].empty())
+    {
+        fs["ply_path"] >> config.ply_path;
+        std::cout << "ply_path: " << config.ply_path << std::endl;
+    }
+    else if (!fs["pcd_path"].empty())
+    {
+        fs["pcd_path"] >> config.pcd_path;
+        std::cout << "pcd_path: " << config.pcd_path << std::endl;
+    }
+
+    config.b_T_cam = Eigen::Isometry3d::Identity();
+    if (!fs["extrinsicRotation"].empty() && !fs["extrinsicTranslation"].empty())
+    {
+        cv::Mat cv_R, cv_T;
+        fs["extrinsicRotation"] >> cv_R;
+        fs["extrinsicTranslation"] >> cv_T;
+
+        Eigen::Matrix3d b_R_cam;
+        cv::cv2eigen(cv_R, b_R_cam);
+        config.b_T_cam.rotate(b_R_cam);
+        Eigen::Vector3d b_t_cam;
+        cv::cv2eigen(cv_T, b_t_cam);
+        config.b_T_cam.translate(b_t_cam);
+    }
 
     std::cout << "is_sim: " << config.is_sim << std::endl;
     std::cout << "gt_file: " << config.gt_file << std::endl;
     std::cout << "image_path: " << config.image_path << std::endl;
-    std::cout << "ply_path: " << config.ply_path << std::endl;
 
     return config;
 }
@@ -93,6 +123,7 @@ std::map<long long, Eigen::Isometry3d> loadGTData(std::string gtFile)
 
     if (!tr.good())
     {
+        std::cout << "Open Gt file failed" << std::endl;
         return gt_data;
     }
     while (!tr.eof() && tr.good())
@@ -109,7 +140,7 @@ std::map<long long, Eigen::Isometry3d> loadGTData(std::string gtFile)
             // EuRoC format with bias GT.
             Eigen::Vector3d translation(p1, p2, p3);
             Eigen::Quaterniond quat(qw, qx, qy, qz);
-            Eigen::Isometry3d pose = Eigen::Isometry3d::Identity(); //(quat, translation);
+            Eigen::Isometry3d pose = Eigen::Isometry3d::Identity();
             pose.translate(translation);
             pose.rotate(quat);
             // Sophus::SE3 pose(quat, translation);
@@ -123,15 +154,25 @@ std::map<long long, Eigen::Isometry3d> loadGTData(std::string gtFile)
         }
         else if (8 == sscanf(buf, "%lld,%lf,%lf,%lf,%lf,%lf,%lf,%lf", &id, &p1, &p2, &p3, &qw, &qx, &qy, &qz))
         {
-            // TUM-VI format
+            // TUM-VI / Blender format
             Eigen::Vector3d translation(p1, p2, p3);
             Eigen::Quaterniond quat(qw, qx, qy, qz);
-            // Sophus::SE3 pose(quat, translation);
-            Eigen::Vector3d velocity(0.0, 0.0, 0.0);
-            Eigen::Vector3d biasRot(0.0, 0.0, 0.0);
-            Eigen::Vector3d biasPos(0.0, 0.0, 0.0);
+            Eigen::Isometry3d pose = Eigen::Isometry3d::Identity();
+            pose.translate(translation);
+            pose.rotate(quat);
 
-            // gtData[id] = dmvio::GTData(pose, velocity, biasRot, biasPos);
+            gt_data[id] = pose;
+        }
+        else if (8 == sscanf(buf, "%lld %lf %lf %lf %lf %lf %lf %lf", &id, &p1, &p2, &p3, &qw, &qx, &qy, &qz))
+        {
+            // TUM-VI / Blender format
+            Eigen::Vector3d translation(p1, p2, p3);
+            Eigen::Quaterniond quat(qw, qx, qy, qz);
+            Eigen::Isometry3d pose = Eigen::Isometry3d::Identity();
+            pose.translate(translation);
+            pose.rotate(quat);
+
+            gt_data[id] = pose;
         }
     }
     tr.close();

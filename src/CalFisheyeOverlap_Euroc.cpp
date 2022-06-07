@@ -2,7 +2,7 @@
  * @Author: Jianheng Liu
  * @Date: 2022-05-07 14:38:02
  * @LastEditors: Jianheng Liu
- * @LastEditTime: 2022-05-16 16:39:51
+ * @LastEditTime: 2022-06-02 11:24:33
  * @Description: Description
  */
 #include <iostream>
@@ -44,35 +44,63 @@ typedef pcl::PointCloud<PointT> PointCloudT;
 camodocal::CameraPtr m_camera;
 pcl::visualization::PCLVisualizer viewer("Matrix transformation example");
 
-cv::Mat matchPointCloudsID(std::map<int, Eigen::Vector3d> &ids_points_img0,
-                           std::map<int, Eigen::Vector3d> &ids_points_img1, PointCloudT::Ptr cloud_match)
+float matchPointCloudsID(std::map<int, Eigen::Vector3d> &ids_points_img0,
+                         std::map<int, Eigen::Vector3d> &ids_points_img1, PointCloudT &cloud_match,
+                         cv::Mat &reproject_img0, cv::Mat &reproject_img1)
 {
-    cv::Mat reproject_img = cv::Mat::zeros(m_camera->imageHeight(), m_camera->imageWidth(), CV_8UC1);
-    for (auto &it : ids_points_img0)
+    reproject_img0 = cv::Mat::zeros(m_camera->imageHeight(), m_camera->imageWidth(), CV_8UC1);
+    reproject_img1 = cv::Mat::zeros(m_camera->imageHeight(), m_camera->imageWidth(), CV_8UC1);
+    for (auto &it0 : ids_points_img0)
     {
-        if (ids_points_img1.find(it.first) != ids_points_img1.end())
+        auto it1 = ids_points_img1.find(it0.first);
+        if (it1 != ids_points_img1.end())
         {
-            cloud_match->points.emplace_back(it.second(0), it.second(1), it.second(2));
+            cloud_match.points.emplace_back(it0.second(0), it0.second(1), it0.second(2));
 
             Eigen::Vector2d pixel;
-            m_camera->spaceToPlane(it.second, pixel);
-            reproject_img.at<uchar>((int)pixel(1), (int)pixel(0)) = it.second(2) / MAP_MAX_SIZE * 255;
+            m_camera->spaceToPlane(it0.second, pixel);
+            reproject_img0.at<uchar>((int)pixel(1), (int)pixel(0)) = it0.second(2) / MAP_MAX_SIZE * 255;
+            m_camera->spaceToPlane(it1->second, pixel);
+            reproject_img1.at<uchar>((int)pixel(1), (int)pixel(0)) = it1->second(2) / MAP_MAX_SIZE * 255;
         }
     }
-    std::cout << "Match Numbers:" << cloud_match->points.size() << std::endl;
-    cv::dilate(reproject_img, reproject_img, cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(20, 20)));
-    cv::erode(reproject_img, reproject_img, cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(20, 20)));
+    std::cout << "Match Numbers:" << cloud_match.points.size() << std::endl;
+    int kernal_size = 10;
+    cv::dilate(reproject_img0, reproject_img0,
+               cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(kernal_size, kernal_size)));
+    cv::erode(reproject_img0, reproject_img0,
+              cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(kernal_size, kernal_size)));
 
-    int occupied_num = 0;
+    cv::dilate(reproject_img1, reproject_img1,
+               cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(kernal_size, kernal_size)));
+    cv::erode(reproject_img1, reproject_img1,
+              cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(kernal_size, kernal_size)));
+
+    int occupied_num0 = 0;
+    int occupied_num1 = 0;
     int img_size = m_camera->imageHeight() * m_camera->imageWidth();
     for (int i = 0; i < img_size; i++)
     {
-        if (reproject_img.at<uchar>(i) != 0)
-            occupied_num++;
+        if (reproject_img0.at<uchar>(i) != 0)
+            occupied_num0++;
+        if (reproject_img1.at<uchar>(i) != 0)
+            occupied_num1++;
     }
-    std::cout << "Occupied Numbers:" << occupied_num << std::endl;
-    std::cout << "Occupied Ratio:" << (float)occupied_num / img_size << std::endl;
-    return reproject_img;
+    float overlap_ratio0 = (float)occupied_num0 / (float)img_size;
+    float overlap_ratio1 = (float)occupied_num1 / (float)img_size;
+    std::cout << "Occupied Numbers in Img0: " << occupied_num0 << std::endl;
+    std::cout << "Occupied Ratio in Img0: " << overlap_ratio0 << std::endl;
+    std::cout << "Occupied Numbers in Img1: " << occupied_num1 << std::endl;
+    std::cout << "Occupied Ratio in Img1: " << overlap_ratio1 << std::endl;
+    if (overlap_ratio0 > overlap_ratio1)
+    {
+        cout << "Overlap Ratio: " << overlap_ratio1 << endl;
+    }
+    else
+    {
+        cout << "Overlap Ratio: " << overlap_ratio0 << endl;
+    }
+    return overlap_ratio0;
 }
 
 void getPointCloudInFOV(PointCloudT::Ptr cloud_in, const Eigen::Matrix4d &img_T_w,
@@ -160,12 +188,11 @@ void getPointCloudInFOV(PointCloudT::Ptr cloud_in, const Eigen::Matrix4d &img_T_
     for (auto &it : ids_points_FOV)
     {
         cloud_FOV->points.emplace_back(cloud_in->points[it.first]);
-        // ids_points_FOV[i] = point;
-        //             cloud_FOV->points.push_back(cloud_in->points[i]);
     }
 }
 
-cv::Mat test(PointCloudT::Ptr cloud_in, Eigen::Isometry3d w_T_img0, Eigen::Isometry3d w_T_img1)
+void TEST(PointCloudT::Ptr cloud_in, Eigen::Isometry3d w_T_img0, Eigen::Isometry3d w_T_img1, cv::Mat &reproject_img0,
+          cv::Mat &reproject_img1)
 {
     std::map<int, Eigen::Vector3d> ids_points_FOV_img0;
     PointCloudT::Ptr cloud_FOV_img0(new PointCloudT());
@@ -176,13 +203,14 @@ cv::Mat test(PointCloudT::Ptr cloud_in, Eigen::Isometry3d w_T_img0, Eigen::Isome
     getPointCloudInFOV(cloud_in, w_T_img1.inverse().matrix(), ids_points_FOV_img1, cloud_FOV_img1);
 
     PointCloudT::Ptr cloud_match(new PointCloudT);
-    cv::Mat reproject_img = matchPointCloudsID(ids_points_FOV_img0, ids_points_FOV_img1, cloud_match);
+    float overlap_ratio =
+        matchPointCloudsID(ids_points_FOV_img0, ids_points_FOV_img1, *cloud_match, reproject_img0, reproject_img1);
     pcl::transformPointCloud(*cloud_match, *cloud_match, w_T_img0.matrix());
 
     // filter out point cloud over 1m in z direction
     // pcl::PassThrough<PointT> pass;
     // pass.setInputCloud(cloud_in);
-    // pass.setFilterFieldName("z");
+    // pass.setFilterFieldNa e("z");
     // pass.setFilterLimits(1.0, 10.0);
     // pass.filter(*cloud_in);
 
@@ -204,13 +232,22 @@ cv::Mat test(PointCloudT::Ptr cloud_in, Eigen::Isometry3d w_T_img0, Eigen::Isome
     viewer.addPointCloud(cloud_match, match_cloud_color_handler, "match_cloud");
     viewer.setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, "match_cloud");
 
-    return reproject_img;
+    // return reproject_img;
     // cv::imshow("reproject_img", reproject_img);
 }
 
 int main(int argc, char **argv)
 {
-    std::string cfg_file = "/home/narwal/narwal_ws/src/CalculateImagesOverlapInHDMap/config/fisheye.yaml";
+    std::string cfg_file;
+    if (argv[1])
+    {
+        cfg_file = argv[1];
+    }
+    else
+    {
+        cfg_file = "/home/narwal/narwal_ws/src/CalculateImagesOverlapInHDMap/config/fisheye.yaml";
+    }
+
     Config config = loadConfigFromYamlFile(cfg_file);
 
     std::map<long long, Eigen::Isometry3d> gt_data = loadGTData(config.gt_file);
@@ -219,14 +256,14 @@ int main(int argc, char **argv)
     m_camera = camodocal::CameraFactory::instance()->generateCameraFromYamlFile(cfg_file);
 
     // set transform from camera to body
-    Eigen::Isometry3d b_T_cam0 = Eigen::Isometry3d::Identity();
-    Eigen::Matrix3d b_R_cam0;
-    b_R_cam0 << 0.0148655429818, -0.999880929698, 0.00414029679422, 0.999557249008, 0.0149672133247, 0.025715529948,
-        -0.0257744366974, 0.00375618835797, 0.999660727178;
-    b_T_cam0.rotate(b_R_cam0);
-    Eigen::Vector3d b_t_cam0;
-    b_t_cam0 << -0.0216401454975, -0.064676986768, 0.00981073058949;
-    b_T_cam0.translate(b_t_cam0);
+    // Eigen::Isometry3d b_T_cam0 = Eigen::Isometry3d::Identity();
+    // Eigen::Matrix3d b_R_cam0;
+    // b_R_cam0 << 0.0148655429818, -0.999880929698, 0.00414029679422, 0.999557249008, 0.0149672133247, 0.025715529948,
+    //     -0.0257744366974, 0.00375618835797, 0.999660727178;
+    // b_T_cam0.rotate(b_R_cam0);
+    // Eigen::Vector3d b_t_cam0;
+    // b_t_cam0 << -0.0216401454975, -0.064676986768, 0.00981073058949;
+    // b_T_cam0.translate(b_t_cam0);
 
     // Generate random number in given range
     srand((unsigned int)time(nullptr)); //初始化种子为随机值
@@ -234,11 +271,21 @@ int main(int argc, char **argv)
     // read ply file and visualize
     PointCloudT::Ptr cloud_in(new PointCloudT);
 
-    // std::string ply_path = "/home/narwal/narwal_ws/src/CalculateImagesOverlapInHDMap/pointcloud/data.ply";
-    if (pcl::io::loadPLYFile(config.ply_path, *cloud_in) == -1) //* load the file
+    if (!config.ply_path.empty())
     {
-        PCL_ERROR("Couldn't read file: %s\n", config.ply_path.c_str());
-        return (-1);
+        if (pcl::io::loadPLYFile(config.ply_path, *cloud_in) == -1) //* load the file
+        {
+            PCL_ERROR("Couldn't read file: %s\n", config.ply_path.c_str());
+            return (-1);
+        }
+    }
+    else if (!config.pcd_path.empty())
+    {
+        if (pcl::io::loadPCDFile(config.pcd_path, *cloud_in) == -1) //* load the file
+        {
+            PCL_ERROR("Couldn't read file: %s\n", config.pcd_path.c_str());
+            return (-1);
+        }
     }
 
     // Define R,G,B colors for the point cloud
@@ -252,19 +299,12 @@ int main(int argc, char **argv)
     viewer.setCameraPosition(0, 0, -20, 0, -1,
                              0); // Setting camera position: http://t.zoukankan.com/ghjnwk-p-10305796.html
 
-    if (config.is_sim)
-    {
-
-        cv::namedWindow("reproject_img", cv::WINDOW_NORMAL);
-    }
-    else
-    {
-        cv::namedWindow("image_pair", cv::WINDOW_NORMAL);
-    }
     bool is_first = true;
+    cv::namedWindow("image_pair", cv::WINDOW_AUTOSIZE);
     while (!viewer.wasStopped())
     { // Display the visualiser until 'q' key is pressed
-        if (cv::waitKey(100) != 255 || is_first)
+        auto key = cv::waitKey(100);
+        if ((key != 255 && key != -1) || is_first)
         {
             is_first = false;
             int img0_id = rand() % image_ids.size();
@@ -272,9 +312,12 @@ int main(int argc, char **argv)
 
             if (gt_data.find(image_ids[img0_id]) != gt_data.end() && gt_data.find(image_ids[img1_id]) != gt_data.end())
             {
-                auto w_T_img0 = gt_data[image_ids[img0_id]] * b_T_cam0;
-                auto w_T_img1 = gt_data[image_ids[img1_id]] * b_T_cam0;
-                cv::Mat reproject_img = test(cloud_in, w_T_img0, w_T_img1);
+                // w_T_img0 = w_T_b * b_T_cam
+                auto w_T_img0 = gt_data[image_ids[img0_id]] * config.b_T_cam;
+                auto w_T_img1 = gt_data[image_ids[img1_id]] * config.b_T_cam;
+
+                cv::Mat reproject_img0, reproject_img1;
+                TEST(cloud_in, w_T_img0, w_T_img1, reproject_img0, reproject_img1);
 
                 if (!config.is_sim)
                 {
@@ -285,18 +328,29 @@ int main(int argc, char **argv)
                                            cv::IMREAD_GRAYSCALE),
                                 image_pair);
                     cv::cvtColor(image_pair, image_pair, cv::COLOR_GRAY2BGR);
-                    cv::applyColorMap(reproject_img, reproject_img, cv::COLORMAP_HOT);
-                    image_pair(cv::Rect(0, 0, reproject_img.cols, reproject_img.rows)) += reproject_img;
+                    cv::applyColorMap(reproject_img0, reproject_img0, cv::COLORMAP_HOT);
+                    cv::applyColorMap(reproject_img1, reproject_img1, cv::COLORMAP_HOT);
+                    image_pair(cv::Rect(0, 0, reproject_img0.cols, reproject_img0.rows)) += reproject_img0;
+                    image_pair(cv::Rect(reproject_img0.cols, 0, reproject_img1.cols, reproject_img1.rows)) +=
+                        reproject_img1;
                     cv::putText(image_pair, "IMAGE0", cv::Point(0, 30), cv::FONT_HERSHEY_COMPLEX, 1,
                                 cv::Scalar(0, 0, 255), 2);
                     cv::putText(image_pair, "IMAGE1", cv::Point(m_camera->imageWidth(), 30), cv::FONT_HERSHEY_COMPLEX,
                                 1, cv::Scalar(0, 255, 0), 2);
+                    cv::resize(image_pair, image_pair, cv::Size(1024, image_pair.rows * 1024 / image_pair.cols));
                     cv::imshow("image_pair", image_pair);
                 }
                 else
                 {
-                    cv::applyColorMap(reproject_img, reproject_img, cv::COLORMAP_HOT);
-                    cv::imshow("reproject_img", reproject_img);
+                    cv::Mat image_pair;
+                    cv::hconcat(reproject_img0, reproject_img1, image_pair);
+                    cv::applyColorMap(image_pair, image_pair, cv::COLORMAP_HOT);
+                    cv::putText(image_pair, "IMAGE0", cv::Point(0, 30), cv::FONT_HERSHEY_COMPLEX, 1,
+                                cv::Scalar(0, 0, 255), 2);
+                    cv::putText(image_pair, "IMAGE1", cv::Point(m_camera->imageWidth(), 30), cv::FONT_HERSHEY_COMPLEX,
+                                1, cv::Scalar(0, 255, 0), 2);
+                    cv::resize(image_pair, image_pair, cv::Size(1024, image_pair.rows * 1024 / image_pair.cols));
+                    cv::imshow("image_pair", image_pair);
                 }
             }
             else
@@ -304,11 +358,7 @@ int main(int argc, char **argv)
                 is_first = true;
             }
         }
-
         viewer.spinOnce();
-        // std::cout << "viewer.getViewerPose() = " << std::endl
-        //           << viewer.getViewerPose().matrix()
-        //           << std::endl;
     }
     cv::destroyAllWindows();
     return (0);

@@ -1,0 +1,25 @@
+%YAML:1.0
+
+is_sim: 1
+
+gt_file: "/home/chrisliu/datasets/blender_simulate_data_5.31/select_pose.txt"
+image_path: "/home/chrisliu/datasets/blender_simulate_data_5.31/imgs"
+depth_path: "/home/chrisliu/datasets/blender_simulate_data_5.31/depth_map"
+# ply_path: "/home/narwal/narwal_ws/src/CalculateImagesOverlapInHDMap/pointcloud/data.ply"
+# pcd_path: "/home/narwal/r3live_ws/src/FAST_LIO/PCD/scans0518-12.pcd"
+
+#camera calibration 
+model_type: KANNALA_BRANDT
+camera_name: camera
+image_width: 1080
+image_height: 1920
+distortion_parameters:
+   k2: -0.02037234526686234
+   k3: 0.0011467506277607713
+   k4: -0.002556344524087611
+   k5: 0.00033670405285301613
+projection_parameters:
+   mu: 522.6439454263076 # fx
+   mv: 522.7972650029271 # fy
+   u0: 543.3751551559554 # cx
+   v0: 966.408823239453  # cy
