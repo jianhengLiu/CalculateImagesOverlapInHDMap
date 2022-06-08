@@ -2,7 +2,7 @@
  * @Author: Jianheng Liu
  * @Date: 2022-05-07 14:38:02
  * @LastEditors: Jianheng Liu
- * @LastEditTime: 2022-06-07 14:05:38
+ * @LastEditTime: 2022-06-07 16:15:36
  * @Description: Description
  */
 #include <cmath>
@@ -51,8 +51,6 @@ int main(int argc, char **argv)
     // TODO: pose跟image一一对应，遍历gt_data：取id读depth,去畸变，投成点云
     // 潜在问题：depth分辨率较高，是否导致点云文件过大？
     std::map<long long, Eigen::Isometry3d> gt_data = loadGTData(config.gt_file);
-    // std::vector<long long> image_ids = loadImageIDs(config.image_path);
-    // camodocal::CameraPtr m_camera = camodocal::CameraFactory::instance()->generateCameraFromYamlFile(cfg_file);
 
     // Generate random number in given range
     srand((unsigned int)time(nullptr)); //初始化种子为随机值
@@ -87,11 +85,11 @@ int main(int argc, char **argv)
 
                 // https://docs.blender.org/manual/zh-hant/dev/render/cycles/object_settings/cameras.html#fisheye
                 // https://baike.baidu.com/item/%E7%90%83%E5%9D%90%E6%A0%87%E7%B3%BB/8315363?fr=aladdin
-                float x = j - depth_img.cols / 2;
-                float y = i - depth_img.rows / 2;
-                float r = sqrt(x * x + y * y);
-                float theta = (-18.0 * r * 10.0 / depth_img.rows) / 180.0 * M_PI;
-                float phi = acos(x / r);
+                double x = j - depth_img.cols / 2;
+                double y = i - depth_img.rows / 2;
+                double r = sqrt(x * x + y * y);
+                double theta = (18.0 * r * 10.0 / depth_img.rows) / 180.0 * M_PI;
+                double phi = acos(x / r);
                 Eigen::Vector3d point_eigen;
                 if (y > 0)
                 {
@@ -106,7 +104,8 @@ int main(int argc, char **argv)
                     point_eigen.z() = cos(theta);
                 }
                 point_eigen *= (double)depth_img.at<ushort>(i, j) / 1000.0;
-                Eigen::Vector3d w_point = it.second * point_eigen;
+                // Eigen::Vector3d w_point = it.second * point_eigen;
+                Eigen::Vector3d w_point = point_eigen;
                 // cout << "x = " << x << " ;y = " << y << " ;r = " << r << " ;theta = " << theta / M_PI * 180.0
                 //      << " ;phi = " << phi / M_PI * 180.0 << " point_eigen.transpose() = " << point_eigen.transpose()
                 //      << endl;
