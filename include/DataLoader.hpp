@@ -2,7 +2,7 @@
  * @Author: Jianheng Liu
  * @Date: 2022-05-12 12:21:54
  * @LastEditors: Jianheng Liu
- * @LastEditTime: 2022-06-02 17:00:59
+ * @LastEditTime: 2022-06-08 12:32:53
  * @Description: Description
  */
 #pragma once
@@ -154,7 +154,7 @@ std::map<long long, Eigen::Isometry3d> loadGTData(std::string gtFile)
         }
         else if (8 == sscanf(buf, "%lld,%lf,%lf,%lf,%lf,%lf,%lf,%lf", &id, &p1, &p2, &p3, &qw, &qx, &qy, &qz))
         {
-            // TUM-VI / Blender format
+            // TUM-VI format
             Eigen::Vector3d translation(p1, p2, p3);
             Eigen::Quaterniond quat(qw, qx, qy, qz);
             Eigen::Isometry3d pose = Eigen::Isometry3d::Identity();
@@ -163,9 +163,9 @@ std::map<long long, Eigen::Isometry3d> loadGTData(std::string gtFile)
 
             gt_data[id] = pose;
         }
-        else if (8 == sscanf(buf, "%lld %lf %lf %lf %lf %lf %lf %lf", &id, &p1, &p2, &p3, &qw, &qx, &qy, &qz))
+        else if (8 == sscanf(buf, "%lld %lf %lf %lf %lf %lf %lf %lf", &id, &p1, &p2, &p3, &qx, &qy, &qz, &qw))
         {
-            // TUM-VI / Blender format
+            // Blender format
             Eigen::Vector3d translation(p1, p2, p3);
             Eigen::Quaterniond quat(qw, qx, qy, qz);
             Eigen::Isometry3d pose = Eigen::Isometry3d::Identity();

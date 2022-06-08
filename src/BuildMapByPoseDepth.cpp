@@ -2,7 +2,7 @@
  * @Author: Jianheng Liu
  * @Date: 2022-05-07 14:38:02
  * @LastEditors: Jianheng Liu
- * @LastEditTime: 2022-06-07 16:15:36
+ * @LastEditTime: 2022-06-08 16:01:35
  * @Description: Description
  */
 #include <cmath>
@@ -31,7 +31,7 @@
 
 using namespace std;
 
-typedef pcl::PointXYZ PointT;
+typedef pcl::PointXYZRGB PointT;
 typedef pcl::PointCloud<PointT> PointCloudT;
 
 int main(int argc, char **argv)
@@ -52,6 +52,12 @@ int main(int argc, char **argv)
     // 潜在问题：depth分辨率较高，是否导致点云文件过大？
     std::map<long long, Eigen::Isometry3d> gt_data = loadGTData(config.gt_file);
 
+    // set transform from camera to body
+    Eigen::Isometry3d T_bc = Eigen::Isometry3d::Identity();
+    Eigen::Matrix3d R_bc;
+    R_bc << 0, 0, 1, -1, 0, 0, 0, -1, 0;
+    T_bc.rotate(R_bc);
+
     // Generate random number in given range
     srand((unsigned int)time(nullptr)); //初始化种子为随机值
 
@@ -61,19 +67,22 @@ int main(int argc, char **argv)
     bool skip = false;
     for (auto &it : gt_data)
     {
-        if (skip)
-        {
-            skip = false;
-            continue;
-        }
-        else
-            skip = true;
+        // if (skip)
+        // {
+        //     skip = false;
+        //     continue;
+        // }
+        // else
+        //     skip = true;
         PointCloudT::Ptr current(new PointCloudT);
         std::string id_str = std::to_string(it.first);
         while (id_str.size() < 8)
             id_str = "0" + id_str;
         cout << "Read: " << config.depth_path + "/" + id_str + ".png" << endl;
+
+        cv::Mat color_img = cv::imread(config.image_path + "/" + id_str + ".png", cv::IMREAD_COLOR);
         cv::Mat depth_img = cv::imread(config.depth_path + "/" + id_str + ".png", cv::IMREAD_UNCHANGED);
+
         for (int i = 0; i < depth_img.rows; i++)
         {
             for (int j = 0; j < depth_img.cols; j++)
@@ -88,24 +97,23 @@ int main(int argc, char **argv)
                 double x = j - depth_img.cols / 2;
                 double y = i - depth_img.rows / 2;
                 double r = sqrt(x * x + y * y);
-                double theta = (18.0 * r * 10.0 / depth_img.rows) / 180.0 * M_PI;
+                double theta = (-18.0 * r * 10.0 / depth_img.rows) / 180.0 * M_PI;
                 double phi = acos(x / r);
                 Eigen::Vector3d point_eigen;
                 if (y > 0)
                 {
-                    point_eigen.x() = sin(theta) * cos(phi);
+                    point_eigen.x() = -sin(theta) * cos(phi);
                     point_eigen.y() = sin(theta) * sin(phi);
-                    point_eigen.z() = cos(theta);
+                    point_eigen.z() = -cos(theta);
                 }
                 else
                 {
-                    point_eigen.x() = sin(theta) * cos(phi);
+                    point_eigen.x() = -sin(theta) * cos(phi);
                     point_eigen.y() = -sin(theta) * sin(phi);
-                    point_eigen.z() = cos(theta);
+                    point_eigen.z() = -cos(theta);
                 }
                 point_eigen *= (double)depth_img.at<ushort>(i, j) / 1000.0;
-                // Eigen::Vector3d w_point = it.second * point_eigen;
-                Eigen::Vector3d w_point = point_eigen;
+                Eigen::Vector3d w_point = it.second * point_eigen;
                 // cout << "x = " << x << " ;y = " << y << " ;r = " << r << " ;theta = " << theta / M_PI * 180.0
                 //      << " ;phi = " << phi / M_PI * 180.0 << " point_eigen.transpose() = " << point_eigen.transpose()
                 //      << endl;
@@ -114,6 +122,9 @@ int main(int argc, char **argv)
                 point.x = w_point.x();
                 point.y = w_point.y();
                 point.z = w_point.z();
+                point.r = color_img.at<cv::Vec3b>(i, j)[2];
+                point.g = color_img.at<cv::Vec3b>(i, j)[1];
+                point.b = color_img.at<cv::Vec3b>(i, j)[0];
 
                 current->points.emplace_back(point);
             }
@@ -134,9 +145,10 @@ int main(int argc, char **argv)
 
     pcl::visualization::PCLVisualizer viewer(
         "Matrix transformation example"); // Define R,G,B colors for the point cloud
-    pcl::visualization::PointCloudColorHandlerCustom<PointT> source_cloud_color_handler(cloud_map, 255, 255, 255);
-    // We add the point cloud to the viewer and pass the color handler
-    viewer.addPointCloud(cloud_map, source_cloud_color_handler, "original_cloud");
+    // pcl::visualization::PointCloudColorHandlerCustom<PointT> source_cloud_color_handler(cloud_map, 255, 255, 255);
+    // // We add the point cloud to the viewer and pass the color handler
+    // viewer.addPointCloud(cloud_map, source_cloud_color_handler, "original_cloud");
+    viewer.addPointCloud(cloud_map, "original_cloud");
     viewer.setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, "original_cloud");
 
     viewer.addCoordinateSystem(1.0, "cloud", 0);
