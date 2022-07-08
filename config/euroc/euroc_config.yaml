@@ -4,7 +4,7 @@ is_sim: 0
 
 gt_file: "/home/narwal/dataset/euroc/V2_01_easy/mav0/state_groundtruth_estimate0/data.csv"
 image_path: "/home/narwal/dataset/euroc/V2_01_easy/mav0/cam0/data"
-ply_path: "/home/narwal/narwal_ws/src/CalculateImagesOverlapInHDMap/pointcloud/data.ply"
+ply_path: "/home/narwal/narwal_ws/src/CalculateImagesOverlapInHDMap/data/data.ply"
 
 #camera calibration 
 model_type: PINHOLE

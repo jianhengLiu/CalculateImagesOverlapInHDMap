@@ -11,9 +11,14 @@
 
 ## 0.2.2D地图到点云地图上ICP基本验证`Registration2DGridMapWith3DMap.cpp`
 
+Dev log:
+- https://furtive-lamprey-00b.notion.site/2D-3DMap-72c912e407534e03befb191671f3e8f0
+  
 1. Download Vicon Room Datasets in EuRoC MAV Dataset which contains a HD pointcloud map
 2. replace `ply_path` with `PATH_TO_DATASET/V2_01_easy/mav0/pointcloud0/data.ply`
 3. run
+   
+![slice_icp](img/slice_icp.png)
 
 ## 0.3.点云地图上Pinhole Camera Overlap计算基本验证`CalImagesOverlapInHDMap_Euroc.cpp`
 
@@ -33,8 +38,18 @@ Dev log:
 
 1. Download Vicon Room Datasets in EuRoC MAV Dataset which contains a HD pointcloud map
 2. change path in `config/fisheye.yaml`
-3. run: enter any key in image window for next random sample.
+3. run: enter any key in image window for next random sample. Observe terminal for overlap result.
+   
+![fisheye_map](img/fisheye_map.png)
+![fisheye_img](img/fisheye_img.png)
 
+## 0.5.依据blender提供RGB-D和poses数据进行重建`BuildMapByPoseDepth.cpp`
+
+
+1. modified in `config/blender/blender.yaml`
+2. run.
+
+![blender](img/blender.png)
 
 # 1.目标
 **输入/已有数据**

@@ -2,7 +2,7 @@
  * @Author: Jianheng Liu
  * @Date: 2022-05-07 14:38:02
  * @LastEditors: Jianheng Liu
- * @LastEditTime: 2022-06-08 16:01:35
+ * @LastEditTime: 2022-06-09 11:19:26
  * @Description: Description
  */
 #include <cmath>
@@ -16,7 +16,7 @@
 #include <pcl/filters/project_inliers.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/io/ply_io.h>
-#include <pcl/point_cloud.h> // for PointCloud
+#include <pcl/point_cloud.h>  // for PointCloud
 #include <pcl/visualization/cloud_viewer.h>
 #include <pcl/visualization/pcl_visualizer.h>
 #include <vector>
@@ -31,7 +31,7 @@
 
 using namespace std;
 
-typedef pcl::PointXYZRGB PointT;
+typedef pcl::PointXYZRGB        PointT;
 typedef pcl::PointCloud<PointT> PointCloudT;
 
 int main(int argc, char **argv)
@@ -43,7 +43,8 @@ int main(int argc, char **argv)
     }
     else
     {
-        cfg_file = "/home/chrisliu/narwal_ws/src/CalculateImagesOverlapInHDMap/config/blender/blender.yaml";
+        cfg_file = "/home/chrisliu/narwal_ws/src/CalculateImagesOverlapInHDMap/config/blender/"
+                   "blender.yaml";
     }
 
     Config config = loadConfigFromYamlFile(cfg_file);
@@ -54,34 +55,35 @@ int main(int argc, char **argv)
 
     // set transform from camera to body
     Eigen::Isometry3d T_bc = Eigen::Isometry3d::Identity();
-    Eigen::Matrix3d R_bc;
+    Eigen::Matrix3d   R_bc;
     R_bc << 0, 0, 1, -1, 0, 0, 0, -1, 0;
     T_bc.rotate(R_bc);
 
     // Generate random number in given range
-    srand((unsigned int)time(nullptr)); //初始化种子为随机值
+    srand((unsigned int)time(nullptr));  //初始化种子为随机值
 
     // read ply file and visualize
     PointCloudT::Ptr cloud_map(new PointCloudT);
 
-    bool skip = false;
+    int skip = config.skip;
     for (auto &it : gt_data)
     {
-        // if (skip)
-        // {
-        //     skip = false;
-        //     continue;
-        // }
-        // else
-        //     skip = true;
+        if (skip)
+        {
+            skip--;
+            continue;
+        }
+        else
+            skip = config.skip;
         PointCloudT::Ptr current(new PointCloudT);
-        std::string id_str = std::to_string(it.first);
+        std::string      id_str = std::to_string(it.first);
         while (id_str.size() < 8)
             id_str = "0" + id_str;
         cout << "Read: " << config.depth_path + "/" + id_str + ".png" << endl;
 
         cv::Mat color_img = cv::imread(config.image_path + "/" + id_str + ".png", cv::IMREAD_COLOR);
-        cv::Mat depth_img = cv::imread(config.depth_path + "/" + id_str + ".png", cv::IMREAD_UNCHANGED);
+        cv::Mat depth_img =
+            cv::imread(config.depth_path + "/" + id_str + ".png", cv::IMREAD_UNCHANGED);
 
         for (int i = 0; i < depth_img.rows; i++)
         {
@@ -94,11 +96,11 @@ int main(int argc, char **argv)
 
                 // https://docs.blender.org/manual/zh-hant/dev/render/cycles/object_settings/cameras.html#fisheye
                 // https://baike.baidu.com/item/%E7%90%83%E5%9D%90%E6%A0%87%E7%B3%BB/8315363?fr=aladdin
-                double x = j - depth_img.cols / 2;
-                double y = i - depth_img.rows / 2;
-                double r = sqrt(x * x + y * y);
-                double theta = (-18.0 * r * 10.0 / depth_img.rows) / 180.0 * M_PI;
-                double phi = acos(x / r);
+                double          x     = j - depth_img.cols / 2;
+                double          y     = i - depth_img.rows / 2;
+                double          r     = sqrt(x * x + y * y);
+                double          theta = (-18.0 * r * 10.0 / depth_img.rows) / 180.0 * M_PI;
+                double          phi   = acos(x / r);
                 Eigen::Vector3d point_eigen;
                 if (y > 0)
                 {
@@ -114,6 +116,7 @@ int main(int argc, char **argv)
                 }
                 point_eigen *= (double)depth_img.at<ushort>(i, j) / 1000.0;
                 Eigen::Vector3d w_point = it.second * point_eigen;
+                // Eigen::Vector3d w_point = point_eigen;
                 // cout << "x = " << x << " ;y = " << y << " ;r = " << r << " ;theta = " << theta / M_PI * 180.0
                 //      << " ;phi = " << phi / M_PI * 180.0 << " point_eigen.transpose() = " << point_eigen.transpose()
                 //      << endl;
@@ -140,27 +143,30 @@ int main(int argc, char **argv)
     // Create the filtering object
     pcl::VoxelGrid<PointT> sor;
     sor.setInputCloud(cloud_map);
-    sor.setLeafSize(0.05f, 0.05f, 0.05f);
+    sor.setLeafSize(0.01f, 0.01f, 0.01f);
     sor.filter(*cloud_map);
 
     pcl::visualization::PCLVisualizer viewer(
-        "Matrix transformation example"); // Define R,G,B colors for the point cloud
+        "Matrix transformation example");  // Define R,G,B colors for the point cloud
     // pcl::visualization::PointCloudColorHandlerCustom<PointT> source_cloud_color_handler(cloud_map, 255, 255, 255);
     // // We add the point cloud to the viewer and pass the color handler
     // viewer.addPointCloud(cloud_map, source_cloud_color_handler, "original_cloud");
     viewer.addPointCloud(cloud_map, "original_cloud");
-    viewer.setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, "original_cloud");
+    viewer.setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2,
+                                            "original_cloud");
 
     viewer.addCoordinateSystem(1.0, "cloud", 0);
     while (!viewer.wasStopped())
-    { // Display the visualiser until 'q' key is pressed
+    {  // Display the visualiser until 'q' key is pressed
         viewer.spinOnce();
     }
     cv::destroyAllWindows();
     // save cloud_map to pcd
     std::cout << "Saving to "
-              << "/home/chrisliu/narwal_ws/src/CalculateImagesOverlapInHDMap/pointcloud/blender.pcd" << std::endl;
-    pcl::io::savePCDFileASCII("/home/chrisliu/narwal_ws/src/CalculateImagesOverlapInHDMap/pointcloud/blender.pcd",
-                              *cloud_map);
+              << "/home/chrisliu/narwal_ws/src/CalculateImagesOverlapInHDMap/data/blender.pcd"
+              << std::endl;
+    pcl::io::savePCDFileASCII(
+        "/home/chrisliu/narwal_ws/src/CalculateImagesOverlapInHDMap/data/blender.pcd",
+        *cloud_map);
     return 0;
 }

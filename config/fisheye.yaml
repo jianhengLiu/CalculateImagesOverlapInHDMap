@@ -4,7 +4,7 @@ is_sim: 1
 
 gt_file: "/home/narwal/dataset/euroc/V2_01_easy/mav0/state_groundtruth_estimate0/data.csv"
 image_path: "/home/narwal/dataset/euroc/V2_01_easy/mav0/cam0/data"
-# ply_path: "/home/narwal/narwal_ws/src/CalculateImagesOverlapInHDMap/pointcloud/data.ply"
+# ply_path: "/home/narwal/narwal_ws/src/CalculateImagesOverlapInHDMap/data/data.ply"
 # pcd_path: "/home/narwal/r3live_ws/src/FAST_LIO/PCD/scans0518-12.pcd"
 pcd_path: "/home/narwal/r3live_output/31_0602_2.pcd"
 

@@ -27,6 +27,8 @@ struct Config
     std::string pcd_path;
 
     Eigen::Isometry3d b_T_cam;
+
+    int skip;
 };
 
 Config loadConfigFromYamlFile(const std::string &filename)
@@ -39,6 +41,7 @@ Config loadConfigFromYamlFile(const std::string &filename)
 
     Config config;
     config.is_sim = static_cast<int>(fs["is_sim"]);
+    config.skip = static_cast<int>(fs["skip"]);
 
     fs["gt_file"] >> config.gt_file;
     fs["image_path"] >> config.image_path;

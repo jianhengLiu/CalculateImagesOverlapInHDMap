@@ -2,11 +2,12 @@
 
 is_sim: 1
 
-gt_file: "/home/chrisliu/datasets/blender_simulate_data_5.31/select_pose.txt"
-image_path: "/home/chrisliu/datasets/blender_simulate_data_5.31/imgs"
-depth_path: "/home/chrisliu/datasets/blender_simulate_data_5.31/depth_map"
-# ply_path: "/home/narwal/narwal_ws/src/CalculateImagesOverlapInHDMap/pointcloud/data.ply"
-# pcd_path: "/home/narwal/r3live_ws/src/FAST_LIO/PCD/scans0518-12.pcd"
+gt_file: "//home/chrisliu/narwal_ws/src/CalculateImagesOverlapInHDMap/data/blender/select_pose.txt"
+image_path: "/home/chrisliu/narwal_ws/src/CalculateImagesOverlapInHDMap/data/blender/imgs"
+depth_path: "/home/chrisliu/narwal_ws/src/CalculateImagesOverlapInHDMap/data/blender/depth_map"
+
+# 每step取一帧数据进行重建
+step: 1
 
 #camera calibration 
 model_type: KANNALA_BRANDT
